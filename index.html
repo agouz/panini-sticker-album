@@ -130,7 +130,7 @@ select{appearance:none;-webkit-appearance:none;cursor:pointer;background-image:u
 <div id="app">
   <!-- PICKER -->
   <div id="pickerView">
-    <div class="pk-hdr"><h1>Sticker Ledger</h1><button class="logout-btn" onclick="doLogout()">Sign out</button></div>
+    <div class="pk-hdr"><h1>Sticker Ledger</h1><span><a class="logout-btn" href="https://agouz.github.io/bat-cave/" style="text-decoration:none;margin-right:10px;padding:10px 6px;">&#8592; Bat Cave</a><button class="logout-btn" onclick="doLogout()" style="padding:10px 6px;">Sign out</button></span></div>
     <p class="pk-sub">Choose an album to track</p>
     <div class="album-grid" id="albumGrid"></div>
   </div>
@@ -186,7 +186,7 @@ const ALBUMS=[
   {id:'wob',name:'World of Batman',short:'World of Batman',icon:'\uD83C\uDF0D',year:2023,active:true},
   {id:'btas',name:'Batman: The Animated Series',short:'BTAS',icon:'\uD83E\uDD87\uFE0F',year:2024,active:true}
 ];
-let CTRIES=[],STKS=[],BSTKS=[],selSlug=null,selSection=null,curAlbum=null,_initializing=false;
+let CTRIES=[],STKS=[],BSTKS=[],selSlug=null,selSection=null,curAlbum=null,_initializing=false,SIMPLE_COUNTS={},simpleViewMissing=false;
 const BM_ICONS=[{kw:['batman in comics'],icon:'\uD83D\uDCD6'},{kw:['bat things'],icon:'\uD83D\uDD27'},{kw:['alternative versions'],icon:'\uD83C\uDF00'},{kw:['bat-family'],icon:'\uD83D\uDC26'},{kw:['justice league'],icon:'\u26A1'},{kw:['villains'],icon:'\uD83D\uDC80'},{kw:['tv shows'],icon:'\uD83D\uDCFA'},{kw:['movies'],icon:'\uD83C\uDFAC'},{kw:['video games'],icon:'\uD83C\uDFAE'},{kw:['batman'],icon:'\uD83E\uDD87'}];
 function bmIconFor(sec){const n=(sec||'').toLowerCase(),h=BM_ICONS.find(s=>s.kw.some(k=>n.includes(k)));return h?h.icon:'\uD83E\uDD87';}
 function bstksFor(sec){return BSTKS.filter(s=>s.section===sec).sort((a,b)=>a.number-b.number);}
@@ -214,9 +214,9 @@ async function init(){
   loadSimpleCounts().then(renderPicker).catch(function(){});
   }finally{_initializing=false;}
 }
-authClient.auth.onAuthStateChange(function(event){if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED')init();});
+authClient.auth.onAuthStateChange(function(event){if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED')setTimeout(init,0);});
 init();
-async function api(path,opts){opts=opts||{};const h=Object.assign({'apikey':ANON_KEY,'Content-Type':'application/json'},opts.headers||{});const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,Object.assign({},opts,{headers:h}));if(!r.ok)throw new Error('SB '+r.status);const t=await r.text();return t?JSON.parse(t):null;}
+async function api(path,opts){opts=opts||{};const a=await authH();const h=Object.assign({'apikey':ANON_KEY,'Content-Type':'application/json'},a,opts.headers||{});const r=await fetch(SUPABASE_URL+'/rest/v1/'+path,Object.assign({},opts,{headers:h}));if(!r.ok)throw new Error('SB '+r.status);const t=await r.text();return t?JSON.parse(t):null;}
 async function authH(){const{data:{session}}=await authClient.auth.getSession();return session?{'Authorization':'Bearer '+session.access_token}:{};}
 async function loadData(){CTRIES=await api('countries?select=*&order=sort_order.asc')||[];STKS=await api('stickers?select=*&order=number.asc')||[];BSTKS=await api('batman_stickers?select=*&order=number.asc')||[];if(CTRIES.length&&!selSlug)selSlug=CTRIES[0].slug;if(BSTKS.length&&!selSection)selSection=bmSections()[0];}
 async function loadSimpleCounts(){
@@ -241,7 +241,7 @@ function renderPicker(){
     else if(a.id==='batman80'){h2=bhv;t2=btot;p2=bpct;}
     else{var sc=SIMPLE_COUNTS[a.id];if(sc){h2=sc.found;t2=sc.total;p2=sc.pct;}else{h2=null;t2=0;p2=0;}}
     var hasData=t2>0;
-    var oc=a.active?'onclick="openAlbum(''+a.id+'')"':'';
+    var oc=a.active?'onclick="openAlbum(\''+a.id+'\')"':'';
     return '<div class="ac'+(a.active?'':' locked')+'" '+oc+'>'
       +(!a.active?'<span class="soon">Soon</span>':'')
       +'<div class="a-icon">'+a.icon+'</div>'
@@ -297,6 +297,7 @@ function renderOv(){
   document.getElementById('ovTop').innerHTML=top.map(c=>row(c,true)).join('');
   document.getElementById('ovBot').innerHTML=bot.map(c=>row(c,false)).join('');
 }
+function renderAll(){renderOv();renderCtrySelect();renderGrid();updateArrows();}
 function renderCtrySelect(){
   const sel=document.getElementById('ctrySel');
   if(curAlbum&&curAlbum.id==='batman80'){
@@ -460,3 +461,7 @@ function renderSimple(){
   });
   panel.innerHTML=h;
 }
+
+</script>
+</body>
+</html>
